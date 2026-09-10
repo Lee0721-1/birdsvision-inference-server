@@ -1,0 +1,11 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: BirdsVision Inference Server
+Source: https://github.com/lee0G21/birdsvision-inference-server
+
+Files: *
+Copyright: 2026 lee0G21
+License: AGPL-3.0-only
+
+Files: openapi/*
+Copyright: 2026 lee0G21
+License: Apache-2.0

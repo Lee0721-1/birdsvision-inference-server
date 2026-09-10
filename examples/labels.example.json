@@ -1,0 +1,23 @@
+[
+    {
+      "class_id": 0,
+      "class_key": "example:bird-0",
+      "chinese_name": "示例鸟类零",
+      "english_name": "Example bird zero",
+      "folk_name": ""
+    },
+    {
+      "class_id": 1,
+      "class_key": "example:bird-1",
+      "chinese_name": "示例鸟类一",
+      "english_name": "Example bird one",
+      "folk_name": ""
+    },
+    {
+      "class_id": 2,
+      "class_key": "example:bird-2",
+      "chinese_name": "示例鸟类二",
+      "english_name": "Example bird two",
+      "folk_name": ""
+    }
+]

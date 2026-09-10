@@ -1,0 +1,501 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BirdsVision API",
+    "version": "1.0.0",
+    "description": "鸟视 HarmonyOS、未来 Android 客户端与后端共同遵守的 API v1 契约。"
+  },
+  "servers": [
+    {
+      "url": "https://api.birdsvision.com.cn",
+      "description": "生产环境"
+    }
+  ],
+  "x-birdsvision-client-policy": {
+    "identify_top_k": 3,
+    "token_cache_safety_seconds": 15,
+    "retry_identify_once_after_http_401": true,
+    "connect_timeout_ms": 15000,
+    "read_timeout_ms": 15000
+  },
+  "x-birdsvision-signature": {
+    "algorithm": "HMAC-SHA256",
+    "signing_key_encoding": "lowercase hex representing 32 raw bytes",
+    "content_digest": "SHA-256 of the exact original image bytes, lowercase hex",
+    "canonical_template": "POST\n/api/identify\ntop_k={top_k}\n{timestamp}\n{nonce}\n{content_sha256}",
+    "canonical_trailing_newline": false
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "检查服务和模型状态",
+        "responses": {
+          "200": {
+            "description": "服务状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/version": {
+      "get": {
+        "operationId": "getAppVersion",
+        "summary": "获取客户端最新版本与官网更新地址",
+        "responses": {
+          "200": {
+            "description": "应用版本信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppVersionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/challenge": {
+      "get": {
+        "operationId": "getAuthChallenge",
+        "summary": "领取一次性挑战值",
+        "responses": {
+          "200": {
+            "description": "一次性挑战值",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/auth/token": {
+      "post": {
+        "operationId": "exchangeAuthChallenge",
+        "summary": "将一次性挑战值换成短期匿名会话",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "短期匿名令牌与会话签名密钥",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationErrorResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/identify": {
+      "post": {
+        "operationId": "identifyBird",
+        "summary": "识别一张用户主动选择的鸟类图片",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "description": "返回结果数；服务端归一化到 1 至 10，客户端固定传 3。",
+            "schema": {
+              "type": "integer",
+              "default": 3
+            }
+          },
+          {
+            "name": "X-BirdsVision-Timestamp",
+            "in": "header",
+            "required": true,
+            "description": "Unix 秒级时间戳，默认允许与服务端相差 30 秒。",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          },
+          {
+            "name": "X-BirdsVision-Nonce",
+            "in": "header",
+            "required": true,
+            "description": "每次请求重新生成的 16 至 128 位 URL-safe 字符串。",
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "X-BirdsVision-Content-SHA256",
+            "in": "header",
+            "required": true,
+            "description": "原始图片二进制的 SHA-256 小写十六进制摘要。",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          {
+            "name": "X-BirdsVision-Signature",
+            "in": "header",
+            "required": true,
+            "description": "会话密钥对规范字符串计算的 HMAC-SHA256 小写十六进制摘要。",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "字段名固定为 file；后端图片上限当前为 10 MiB。"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "按置信度降序排列的识别结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentifySuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "413": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationErrorResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "BirdsVision 业务错误",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ValidationErrorResponse": {
+        "description": "FastAPI 在进入业务路由前返回的参数或 JSON 结构错误",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "model_loaded",
+          "num_classes"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          },
+          "model_loaded": {
+            "type": "boolean"
+          },
+          "num_classes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "当前加载模型的输出类别数；客户端不得固定为 755。"
+          }
+        }
+      },
+      "AppVersionResponse": {
+        "type": "object",
+        "required": [
+          "latest_version",
+          "minimum_supported_version",
+          "update_url"
+        ],
+        "properties": {
+          "latest_version": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[0-9]+(?:\\.[0-9]+)*$"
+          },
+          "minimum_supported_version": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[0-9]+(?:\\.[0-9]+)*$"
+          },
+          "update_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048,
+            "pattern": "^https://birdsvision\\.com\\.cn(?:/.*)?$"
+          }
+        }
+      },
+      "AuthChallengeResponse": {
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "challenge",
+          "expires_in"
+        ],
+        "properties": {
+          "challenge_id": {
+            "type": "string"
+          },
+          "challenge": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "AuthTokenRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "challenge_id",
+          "challenge"
+        ],
+        "properties": {
+          "challenge_id": {
+            "type": "string"
+          },
+          "challenge": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthTokenResponse": {
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type",
+          "signing_key",
+          "expires_in"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "signing_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "BirdResult": {
+        "type": "object",
+        "required": [
+          "rank",
+          "class_id",
+          "class_key",
+          "chinese_name",
+          "english_name",
+          "folk_name",
+          "confidence"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "class_id": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "当前服务端模型中的类别索引；不是跨模型稳定的物种主键，客户端不得固定最大值。"
+          },
+          "class_key": {
+            "type": "string"
+          },
+          "chinese_name": {
+            "type": "string"
+          },
+          "english_name": {
+            "type": "string"
+          },
+          "folk_name": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "IdentifySuccessResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "results",
+          "elapsed_ms"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "results": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/BirdResult"
+            }
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "error_code",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": false
+          },
+          "error_code": {
+            "type": "string",
+            "enum": [
+              "NO_FILE",
+              "INVALID_IMAGE",
+              "AUTH_REQUIRED",
+              "INVALID_AUTH",
+              "INVALID_CHALLENGE",
+              "TOKEN_EXPIRED",
+              "REPLAY_DETECTED",
+              "FILE_TOO_LARGE",
+              "RATE_LIMITED",
+              "INFERENCE_ERROR",
+              "MODEL_NOT_READY",
+              "SERVER_BUSY"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "properties": {
+          "detail": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}
