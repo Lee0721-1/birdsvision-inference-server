@@ -8,6 +8,13 @@ BirdsVision 的开源准备推理服务器。包含 FastAPI 图片识别接口�
 
 [鸟视 BirdsVision 官网](https://www.birdsvision.com.cn/)介绍 App、当前模型进度、隐私说明与下载方式。本仓库保存推理服务的开源准备代码；官网页面不是本仓库运行实例的对应源码证明。
 
+## 目录
+
+- `birdsvision_server/api/`：接口、鉴权和客户端版本分流；`tests/api/`：对应测试。
+- `birdsvision_server/convnext/`：旧版分类推理和双视图分类运算；`tests/convnext/`：对应测试。
+- `birdsvision_server/soyol/`：1.0.2 定位与分类链路；`tests/soyol/`：版本分流测试。
+- `birdsvision_server/config.py`：环境变量配置；`openapi/`：接口合同。
+
 ## 安装和测试
 
 ```bash
@@ -26,7 +33,7 @@ python -m pytest -q
 export BIRDSVISION_MODEL_PATH=/private/path/model.pth
 export BIRDSVISION_LABELS_PATH=/private/path/labels.json
 export BIRDSVISION_NUM_CLASSES=1224
-uvicorn app:app --host 127.0.0.1 --port 8000
+uvicorn birdsvision_server.api.app:app --host 127.0.0.1 --port 8000
 ```
 
 容器使用同一组私有环境变量，并将自有权重和匹配的类表只读挂载到容器内；镜像与仓库都不包含它们。容器对外暴露 8000 端口，健康检查查询容器内的 `/api/health`。公网部署仍需反向代理、TLS 和访问控制。
@@ -37,7 +44,7 @@ uvicorn app:app --host 127.0.0.1 --port 8000
 
 SOYOL 取自 Student YOLO；内部教师模型 Teacher YOLO 简写为 TYLO。TYLO 是闭源内部模型，主要用于比对学生模型的效果。
 
-`modern_inference.py` 通过三个私有环境变量分别加载匹配的分类器权重、类表和单类 SOYOL Detect 权重；它不提供这些文件。SOYOL 显式使用 one-to-many 分支，`imgsz=640`、`conf=0.25`、`iou=0.7`，经 NMS 后最多 10 框；零框时仅用原图，定位错误直接报错。分类器一次处理原图及裁剪视图，使用随源码写明的融合与分区校准参数。`bird_box` 仅适用于 1.0.2 及以上，且与版本号共同绑定到 HMAC 签名。
+`birdsvision_server/soyol/modern_inference.py` 通过三个私有环境变量分别加载匹配的分类器权重、类表和单类 SOYOL Detect 权重；它不提供这些文件。SOYOL 显式使用 one-to-many 分支，`imgsz=640`、`conf=0.25`、`iou=0.7`，经 NMS 后最多 10 框；零框时仅用原图，定位错误直接报错。分类器一次处理原图及裁剪视图，使用随源码写明的融合与分区校准参数。`bird_box` 仅适用于 1.0.2 及以上，且与版本号共同绑定到 HMAC 签名。
 
 这个仓库当前仍为 Private，尚未附带 SOYOL 权重、模型卡、许可署名和独立 `final_test` 验收。内部 1.0.2 服务已运行，不应把本仓库当前提交描述为可供网络用户下载的生产对应源码。正式公开前，应核对实际部署文件、依赖版本和构建提交，公开相应源码与模型发布材料。
 

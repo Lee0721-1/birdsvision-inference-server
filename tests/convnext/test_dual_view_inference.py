@@ -3,7 +3,7 @@
 import torch
 from PIL import Image
 
-import dual_view_inference as dual
+from birdsvision_server.convnext import dual_view_inference as dual
 
 
 def transform(image):

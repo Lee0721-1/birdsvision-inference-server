@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 from fastapi.testclient import TestClient
 
-import app as server_app
-import inference
+from birdsvision_server.api import app as server_app
+from birdsvision_server.convnext import inference
 
 
 def test_health_and_identify_contract_with_fake_backend(monkeypatch):

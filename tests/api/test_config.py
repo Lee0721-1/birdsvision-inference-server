@@ -4,7 +4,7 @@ import importlib
 
 import pytest
 
-import config
+from birdsvision_server import config
 
 
 def test_public_defaults_are_local_and_use_example_labels():

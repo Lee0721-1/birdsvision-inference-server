@@ -13,8 +13,8 @@ from pathlib import Path
 import timm
 import torch
 
-import inference
-from dual_view_inference import classify_parent_v2
+from birdsvision_server.convnext import inference
+from birdsvision_server.convnext.dual_view_inference import classify_parent_v2
 
 
 MODEL_ENV = "BIRDSVISION_1983_MODEL_PATH"

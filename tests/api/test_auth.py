@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import time
 
-import app as app_module
+from birdsvision_server.api import app as app_module
 
 
 def assert_error(response, status_code, error_code):

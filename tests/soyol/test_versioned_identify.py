@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 lee0G21
 # SPDX-License-Identifier: AGPL-3.0-only
-import app as app_module
+from birdsvision_server.api import app as app_module
 
 
 def test_unversioned_and_101_requests_keep_legacy_response(client, auth_headers, monkeypatch):

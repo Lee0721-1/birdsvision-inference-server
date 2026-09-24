@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import pytest
 
-from client_version import legacy_results, route_for_version
+from birdsvision_server.api.client_version import legacy_results, route_for_version
 
 
 @pytest.mark.parametrize("version,expected", [

@@ -14,11 +14,11 @@ from python_multipart import MultipartParser
 from python_multipart.exceptions import MultipartParseError
 from python_multipart.multipart import parse_options_header
 
-import config
-import inference
-import modern_inference
-from client_version import APP_VERSION_HEADER, legacy_results, route_for_version
-import auth as api_auth
+from birdsvision_server import config
+from birdsvision_server.convnext import inference
+from birdsvision_server.soyol import modern_inference
+from birdsvision_server.api.client_version import APP_VERSION_HEADER, legacy_results, route_for_version
+from birdsvision_server.api import auth as api_auth
 
 
 MULTIPART_OVERHEAD_ALLOWANCE_BYTES = 2 * 1024 * 1024

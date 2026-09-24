@@ -5,7 +5,7 @@ import io
 import pytest
 from PIL import Image
 
-import inference
+from birdsvision_server.convnext import inference
 
 
 def image_bytes():

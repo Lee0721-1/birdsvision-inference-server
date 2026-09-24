@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
-SERVER_DIR = Path(__file__).resolve().parent
+SERVER_DIR = Path(__file__).resolve().parent.parent
 
 
 def read_int(name, default, minimum, maximum):

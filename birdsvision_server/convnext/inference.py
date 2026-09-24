@@ -14,8 +14,8 @@ import torch.nn as nn
 import torchvision.models as models
 from PIL import Image
 
-import config
-import labels as labels_mod
+from birdsvision_server import config
+from birdsvision_server.convnext import labels as labels_mod
 
 
 class StableClassifier(nn.Module):
