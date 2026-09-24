@@ -141,6 +141,20 @@
             }
           },
           {
+            "name": "bird_box",
+            "in": "query",
+            "required": false,
+            "description": "仅 1.0.2 及以上可传：用户手动画出的鸟框，按上传图片宽高归一化为 left,top,right,bottom。传入后跳过 SOYOL 自动定位。",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-BirdsVision-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "缺失或低于 1.0.2 时使用旧版识别与响应；1.0.2 及以上使用 1983 类与 SOYOL。新版签名同时绑定此版本号和 bird_box 原文。",
+            "schema": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)*$" }
+          },
+          {
             "name": "X-BirdsVision-Timestamp",
             "in": "header",
             "required": true,
@@ -414,6 +428,11 @@
           },
           "folk_name": {
             "type": "string"
+          },
+          "scientific_names": {
+            "type": "array",
+            "description": "仅 1.0.2 及以上响应返回。若类别跨多个物种，则列出全部对应学名。",
+            "items": { "type": "string" }
           },
           "confidence": {
             "type": "number",

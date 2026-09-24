@@ -92,15 +92,20 @@ class AuthManager:
         nonce: str,
         content_sha256: str,
         top_k: int,
+        app_version: str | None = None,
+        bird_box: str | None = None,
     ) -> bytes:
-        return (
+        canonical = (
             "POST\n"
             "/api/identify\n"
             f"top_k={top_k}\n"
             f"{timestamp}\n"
             f"{nonce}\n"
             f"{content_sha256.lower()}"
-        ).encode("utf-8")
+        )
+        if app_version is not None:
+            canonical += f"\napp_version={app_version}\nbird_box={bird_box or ''}"
+        return canonical.encode("utf-8")
 
     def _cleanup(self, now: float) -> None:
         for challenge_id in [
@@ -192,6 +197,8 @@ class AuthManager:
         signature: str,
         top_k: int,
         now: float | None = None,
+        app_version: str | None = None,
+        bird_box: str | None = None,
     ) -> str:
         current = time.time() if now is None else now
         if not authorization.startswith("Bearer "):
@@ -255,6 +262,8 @@ class AuthManager:
                 nonce,
                 content_sha256,
                 top_k,
+                app_version,
+                bird_box,
             )
             expected_signature = hmac.new(
                 session.signing_key,

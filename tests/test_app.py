@@ -28,3 +28,14 @@ def test_health_and_identify_contract_with_fake_backend(monkeypatch):
         )
     assert response.status_code == 200
     assert response.json()["results"][0]["class_key"] == "example:bird-0"
+
+
+def test_source_revision_requires_published_commit(client, monkeypatch):
+    monkeypatch.setattr(server_app.config, "SOURCE_REPOSITORY_URL", "")
+    monkeypatch.setattr(server_app.config, "SOURCE_COMMIT", "")
+    assert client.get("/api/source").status_code == 503
+    monkeypatch.setattr(server_app.config, "SOURCE_REPOSITORY_URL", "https://github.com/example/server")
+    monkeypatch.setattr(server_app.config, "SOURCE_COMMIT", "a" * 40)
+    response = client.get("/api/source")
+    assert response.status_code == 200
+    assert response.json()["source_url"] == "https://github.com/example/server/tree/" + "a" * 40

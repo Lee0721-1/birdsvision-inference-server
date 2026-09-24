@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 SERVER_DIR = Path(__file__).resolve().parent
 
@@ -53,5 +55,16 @@ DEFAULT_TOP_K = read_int("BIRDSVISION_DEFAULT_TOP_K", 3, 1, 10)
 APP_LATEST_VERSION = os.getenv("BIRDSVISION_APP_LATEST_VERSION", "0.0.0").strip()
 APP_MINIMUM_SUPPORTED_VERSION = os.getenv("BIRDSVISION_APP_MINIMUM_SUPPORTED_VERSION", "0.0.0").strip()
 APP_UPDATE_URL = os.getenv("BIRDSVISION_APP_UPDATE_URL", "https://example.invalid/").strip()
+SOURCE_REPOSITORY_URL = os.getenv("BIRDSVISION_SOURCE_REPOSITORY_URL", "").strip()
+SOURCE_COMMIT = os.getenv("BIRDSVISION_SOURCE_COMMIT", "").strip()
+if bool(SOURCE_REPOSITORY_URL) != bool(SOURCE_COMMIT):
+    raise ValueError("source repository URL and commit must be configured together")
+if SOURCE_REPOSITORY_URL:
+    source_url = urlsplit(SOURCE_REPOSITORY_URL)
+    if (source_url.scheme != "https" or not source_url.hostname
+            or source_url.username or source_url.password
+            or source_url.query or source_url.fragment
+            or re.fullmatch(r"[0-9a-f]{40}", SOURCE_COMMIT) is None):
+        raise ValueError("source repository must be HTTPS with a full Git commit")
 HOST = os.getenv("BIRDSVISION_HOST", "127.0.0.1").strip()
 PORT = read_int("BIRDSVISION_PORT", 8000, 1, 65535)

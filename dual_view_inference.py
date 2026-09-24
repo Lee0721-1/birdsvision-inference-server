@@ -97,3 +97,72 @@ def classify_parent(
         )
         probabilities = torch.softmax(fused, dim=0)
     return probabilities, crop_count
+
+
+def classify_parent_v2(
+    classifier,
+    image: Image.Image,
+    ordered_boxes: Sequence[Sequence[float]],
+    transform,
+    device: torch.device,
+    *,
+    max_views: int,
+    crop_expansion: float,
+    full_weight: float,
+    many_box_threshold: int,
+    many_box_full_weight: float,
+    appended_class_boundary: int,
+    appended_logit_offset: float,
+) -> tuple[torch.Tensor, int, int]:
+    """Frozen v2 decision for one parent; the caller supplies all release settings."""
+    if type(max_views) is not int or max_views < 1:
+        raise ValueError("max_views must be a positive integer")
+    if type(many_box_threshold) is not int or many_box_threshold < 1:
+        raise ValueError("many_box_threshold must be a positive integer")
+    if (type(appended_logit_offset) not in (int, float)
+            or not math.isfinite(appended_logit_offset)):
+        raise ValueError("appended_logit_offset must be finite")
+    for name, value in (("full_weight", full_weight),
+                        ("many_box_full_weight", many_box_full_weight)):
+        if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
+            raise ValueError(f"{name} must be finite in [0, 1]")
+    batch, crop_count = build_view_batch(
+        image, ordered_boxes, transform,
+        max_views=max_views, crop_expansion=crop_expansion,
+    )
+    truncated_count = max(0, len(ordered_boxes) - crop_count)
+    with torch.no_grad():
+        logits = classifier(batch.to(device))
+        if (logits.ndim != 2 or logits.shape[0] != crop_count + 1
+                or type(appended_class_boundary) is not int
+                or not 0 < appended_class_boundary < logits.shape[1]):
+            raise ValueError("classifier output and release class partition disagree")
+        if not bool(torch.isfinite(logits).all()):
+            raise ValueError("classifier returned non-finite logits")
+        if crop_count == 0:
+            fused = logits[0]
+        else:
+            alpha = (many_box_full_weight if crop_count > many_box_threshold
+                     else full_weight)
+            fused = alpha * logits[0] + (1 - alpha) * logits[1:].mean(dim=0)
+        decision = fused.clone()
+        decision[appended_class_boundary:] += appended_logit_offset
+        probabilities = torch.softmax(decision, dim=0)
+    return probabilities, crop_count, truncated_count
+
+
+def locate_and_classify_parent_v2(
+    locator,
+    classifier,
+    image: Image.Image,
+    transform,
+    device: torch.device,
+    **decision_settings,
+) -> tuple[torch.Tensor, int, int]:
+    """In-memory orchestration; locator errors propagate instead of becoming zero boxes."""
+    ordered_boxes = locator(image)
+    if ordered_boxes is None:
+        raise ValueError("locator returned no result")
+    return classify_parent_v2(
+        classifier, image, ordered_boxes, transform, device, **decision_settings,
+    )

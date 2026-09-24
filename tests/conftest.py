@@ -23,6 +23,7 @@ import app as app_module
 def client(monkeypatch):
     monkeypatch.setattr(app_module.inference, "init_model", lambda: None)
     monkeypatch.setattr(app_module.inference, "is_ready", lambda: True)
+    monkeypatch.setattr(app_module.modern_inference, "init_model", lambda: None)
     with TestClient(app_module.app) as test_client:
         yield test_client
 
@@ -45,12 +46,14 @@ def auth_session(client):
 def auth_headers(auth_session):
     signing_key = bytes.fromhex(auth_session["signing_key"])
 
-    def build(image_bytes, top_k=3, nonce=None, timestamp=None):
+    def build(image_bytes, top_k=3, nonce=None, timestamp=None,
+              app_version=None, bird_box=None):
         request_timestamp = int(time.time()) if timestamp is None else timestamp
         request_nonce = nonce or secrets.token_urlsafe(18)
         image_sha256 = hashlib.sha256(image_bytes).hexdigest()
         canonical = app_module.api_auth.AuthManager.canonical_identify_request(
-            request_timestamp, request_nonce, image_sha256, top_k
+            request_timestamp, request_nonce, image_sha256, top_k,
+            app_version, bird_box,
         )
         signature = hmac.new(signing_key, canonical, hashlib.sha256).hexdigest()
         return {

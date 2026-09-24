@@ -19,3 +19,15 @@ def test_invalid_integer_is_rejected(monkeypatch):
         importlib.reload(config)
     monkeypatch.delenv("BIRDSVISION_PORT")
     importlib.reload(config)
+
+
+def test_source_identity_requires_url_and_full_commit(monkeypatch):
+    monkeypatch.setenv("BIRDSVISION_SOURCE_REPOSITORY_URL", "https://github.com/example/server")
+    with pytest.raises(ValueError, match="configured together"):
+        importlib.reload(config)
+    monkeypatch.setenv("BIRDSVISION_SOURCE_COMMIT", "short")
+    with pytest.raises(ValueError, match="full Git commit"):
+        importlib.reload(config)
+    monkeypatch.delenv("BIRDSVISION_SOURCE_REPOSITORY_URL")
+    monkeypatch.delenv("BIRDSVISION_SOURCE_COMMIT")
+    importlib.reload(config)

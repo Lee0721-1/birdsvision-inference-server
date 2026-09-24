@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import asyncio
 import logging
+import math
 import time
 import uuid
 from contextlib import asynccontextmanager, suppress
@@ -15,6 +16,8 @@ from python_multipart.multipart import parse_options_header
 
 import config
 import inference
+import modern_inference
+from client_version import APP_VERSION_HEADER, legacy_results, route_for_version
 import auth as api_auth
 
 
@@ -148,6 +151,7 @@ async def lifespan(app: FastAPI):
         config.AUTH_IDENTIFY_PER_TOKEN_PER_MINUTE,
     )
     inference.init_model()
+    modern_inference.init_model()
     yield
 
 
@@ -245,6 +249,8 @@ async def run_inference_limited(
     data: bytes,
     top_k: int,
     limiter: InferenceLimiter,
+    predictor=None,
+    manual_box=None,
 ):
     if not limiter.try_admit():
         raise InferenceQueueFull()
@@ -255,9 +261,10 @@ async def run_inference_limited(
             queue_ms = int((time.perf_counter() - waiting_started) * 1000)
             prediction_task = asyncio.create_task(
                 asyncio.to_thread(
-                    inference.predict,
+                    predictor or inference.predict,
                     data,
                     top_k,
+                    *(() if manual_box is None else (manual_box,)),
                 )
             )
             try:
@@ -289,6 +296,17 @@ def app_version():
     }
 
 
+@app.get("/api/source")
+def source_revision():
+    if not config.SOURCE_REPOSITORY_URL:
+        return err(503, "SOURCE_NOT_PUBLISHED", "Source revision has not been published")
+    return {
+        "repository_url": config.SOURCE_REPOSITORY_URL,
+        "commit": config.SOURCE_COMMIT,
+        "source_url": f"{config.SOURCE_REPOSITORY_URL.rstrip('/')}/tree/{config.SOURCE_COMMIT}",
+    }
+
+
 @app.get("/api/auth/challenge")
 def auth_challenge(request: Request):
     try:
@@ -315,9 +333,15 @@ def auth_token(request: Request, payload: AuthTokenRequest):
 async def identify(
     request: Request,
     top_k: int = Query(config.DEFAULT_TOP_K),
+    bird_box: str | None = Query(None),
 ):
     request_id = uuid.uuid4().hex
     request_started = time.perf_counter()
+
+    try:
+        route = route_for_version(request.headers.get(APP_VERSION_HEADER))
+    except ValueError:
+        return err(400, "INVALID_APP_VERSION", "应用版本号无效")
 
     expected_content_sha256: str | None = None
     if config.AUTH_REQUIRED:
@@ -331,6 +355,8 @@ async def identify(
                     request.headers.get("x-birdsvision-content-sha256", ""),
                     request.headers.get("x-birdsvision-signature", ""),
                     top_k,
+                    app_version=request.headers.get(APP_VERSION_HEADER) if route == "modern" else None,
+                    bird_box=bird_box if route == "modern" else None,
                 )
             )
         except api_auth.AuthError as exc:
@@ -343,7 +369,21 @@ async def identify(
             )
             return err(exc.status_code, exc.code, exc.message)
 
-    if not inference.is_ready():
+    manual_box = None
+    if bird_box is not None:
+        if route != "modern":
+            return err(400, "INVALID_BIRD_BOX", "当前版本不支持手动画框")
+        try:
+            parts = tuple(float(value) for value in bird_box.split(","))
+            if len(parts) != 4 or not all(math.isfinite(value) for value in parts):
+                raise ValueError("INVALID_BIRD_BOX")
+            left, top, right, bottom = parts
+            if not (0 <= left < right <= 1 and 0 <= top < bottom <= 1):
+                raise ValueError("INVALID_BIRD_BOX")
+            manual_box = parts
+        except ValueError:
+            return err(400, "INVALID_BIRD_BOX", "鸟框坐标无效")
+    if not (modern_inference.is_ready() if route == "modern" else inference.is_ready()):
         total_ms = int((time.perf_counter() - request_started) * 1000)
         log_identify(request_id, 503, total_ms, error_code="MODEL_NOT_READY")
         return err(503, "MODEL_NOT_READY", "服务正在启动，请稍后重试")
@@ -391,7 +431,11 @@ async def identify(
             data,
             top_k,
             request.app.state.inference_limiter,
+            predictor=modern_inference.predict if route == "modern" else inference.predict,
+            manual_box=manual_box,
         )
+        if route == "legacy":
+            results = legacy_results(results)
     except InferenceQueueFull:
         total_ms = int((time.perf_counter() - request_started) * 1000)
         log_identify(

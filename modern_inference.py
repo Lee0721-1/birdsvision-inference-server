@@ -1,0 +1,124 @@
+# SPDX-FileCopyrightText: 2026 lee0G21
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Isolated 1.0.2 classifier and SOYOL path; legacy runtime stays loaded."""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+import time
+from pathlib import Path
+
+import timm
+import torch
+
+import inference
+from dual_view_inference import classify_parent_v2
+
+
+MODEL_ENV = "BIRDSVISION_1983_MODEL_PATH"
+LABELS_ENV = "BIRDSVISION_1983_LABELS_PATH"
+SOYOL_ENV = "BIRDSVISION_SOYOL_MODEL_PATH"
+_model = None
+_transform = None
+_device = None
+_locator = None
+_labels = None
+
+
+def configured() -> bool:
+    values = [os.getenv(name) for name in (MODEL_ENV, LABELS_ENV, SOYOL_ENV)]
+    if any(values) and not all(values):
+        raise ValueError("all 1.0.2 model paths must be set together")
+    return all(values)
+
+
+def init_model() -> None:
+    global _model, _transform, _device, _locator, _labels
+    if not configured() or _model is not None:
+        return
+    labels_path = Path(os.environ[LABELS_ENV])
+    loaded_labels = json.loads(labels_path.read_text(encoding="utf-8"))
+    if len(loaded_labels) != 1983 or any(
+        row.get("class_id") != index or not row.get("scientific_names")
+        for index, row in enumerate(loaded_labels)
+    ):
+        raise ValueError("1983 class labels or scientific names are incomplete")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = inference.StableClassifier(num_classes=1983)
+    state = torch.load(os.environ[MODEL_ENV], map_location=device, weights_only=True)
+    model.load_state_dict(state, strict=True)
+    model.to(device).eval()
+    transform = timm.data.create_transform(
+        **timm.data.resolve_model_data_config(model), is_training=False,
+    )
+    from ultralytics import YOLO
+    locator = YOLO(os.environ[SOYOL_ENV])
+    if locator.task != "detect" or locator.names != {0: "bird"}:
+        raise ValueError("SOYOL must be a single-class bird Detect model")
+    locator.model.end2end = False
+    if locator.model.end2end:
+        raise ValueError("SOYOL NMS branch is not active")
+    with torch.no_grad():
+        model(torch.zeros(1, 3, 224, 224, device=device))
+    _model, _transform, _device = model, transform, device
+    _locator, _labels = locator, loaded_labels
+
+
+def is_ready() -> bool:
+    return _model is not None and _locator is not None
+
+
+def _detected_boxes(image) -> list[list[float]]:
+    predictions = _locator.predict(
+        source=image, imgsz=640, conf=0.25, iou=0.7, max_det=10,
+        device=str(_device), verbose=False,
+    )
+    if len(predictions) != 1:
+        raise RuntimeError("SOYOL returned unexpected image count")
+    if _locator.model.end2end:
+        raise RuntimeError("SOYOL changed to the non-NMS branch")
+    boxes = predictions[0].boxes
+    if boxes is None:
+        return []
+    return boxes.xyxy.detach().cpu().tolist()
+
+
+def _manual_pixels(box: tuple[float, float, float, float], image) -> list[float]:
+    if len(box) != 4 or not all(math.isfinite(value) for value in box):
+        raise ValueError("INVALID_BIRD_BOX")
+    left, top, right, bottom = box
+    if not (0 <= left < right <= 1 and 0 <= top < bottom <= 1):
+        raise ValueError("INVALID_BIRD_BOX")
+    return [left * image.width, top * image.height,
+            right * image.width, bottom * image.height]
+
+
+def predict(image_bytes: bytes, top_k: int = 3,
+            manual_box: tuple[float, float, float, float] | None = None):
+    if not is_ready():
+        raise RuntimeError("MODEL_NOT_READY")
+    image = inference.decode_image(image_bytes)
+    started = time.time()
+    boxes = ([_manual_pixels(manual_box, image)] if manual_box is not None
+             else _detected_boxes(image))
+    probabilities, _, _ = classify_parent_v2(
+        _model, image, boxes, _transform, _device,
+        max_views=11, crop_expansion=0.15,
+        full_weight=0.3, many_box_threshold=3, many_box_full_weight=0.3,
+        appended_class_boundary=1224,
+        appended_logit_offset=3.1824216842651367,
+    )
+    values, indices = torch.topk(probabilities, max(1, min(int(top_k), 10)))
+    results = []
+    for rank, (confidence, class_id) in enumerate(zip(values.tolist(), indices.tolist()), 1):
+        label = _labels[class_id]
+        results.append({
+            "rank": rank, "class_id": class_id, "class_key": label["class_key"],
+            "chinese_name": label["chinese_name"], "english_name": label["english_name"],
+            "folk_name": label.get("folk_name", ""),
+            "scientific_names": label["scientific_names"],
+            "confidence": round(float(confidence), 4),
+        })
+    return results, int((time.time() - started) * 1000)
