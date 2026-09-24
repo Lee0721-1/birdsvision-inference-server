@@ -1,5 +1,7 @@
 # BirdsVision Inference Server
 
+SOYOL stands for Student YOLO. The internal teacher model is called TYLO (Teacher YOLO); it remains closed source and is mainly used to compare the student's results.
+
 Private open-source preparation of the BirdsVision FastAPI contract, authentication, request limits, dual-view fusion, and versioned 1.0.2 SOYOL Detect route. Production classifier weights, labels, SOYOL weights, private configuration, and datasets are excluded. This repository is not yet a publicly accessible copy of the running production revision.
 
 Server source is AGPL-3.0-only. The OpenAPI document is Apache-2.0.
