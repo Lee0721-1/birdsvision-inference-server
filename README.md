@@ -48,7 +48,7 @@ uvicorn birdsvision_server.api.app:app --host 127.0.0.1 --port 8000
 
 SOYOL 取自 Student YOLO；内部教师模型 Teacher YOLO 简写为 TYLO。TYLO 是闭源内部模型，主要用于比对学生模型的效果。
 
-SOYOL 的独立服务接收图片，返回原图尺寸与鸟框；其代码、权重和安装说明属于[定位项目](https://github.com/Lee0721-1/birdsvision-soyol-locator)。本仓库只保留分类侧的 HTTP 客户端和响应校验。
+SOYOL 的独立服务接收图片，返回原图尺寸与鸟框；其代码、权重和安装说明属于[定位项目](https://github.com/Lee0721-1/birdsvision-soyol-locator)。本次对应的定位源码和 `best.pt` 权重在[固定 SOYOL v1 Release](https://github.com/Lee0721-1/birdsvision-soyol-locator/releases/tag/soyol-v1-a-documented-20260927)。本仓库只保留分类侧的 HTTP 客户端和响应校验。
 
 分类服务另外设置 `BIRDSVISION_1983_MODEL_PATH`、`BIRDSVISION_1983_LABELS_PATH` 和 `BIRDSVISION_SOYOL_LOCATOR_URL=http://127.0.0.1:8001/v1/locate`。分类服务仅接受本机定位地址，并核对返回的图片尺寸和鸟框。零框时仅用原图，定位服务出错时识别请求失败，不回退旧模型。分类器一次处理原图及裁剪视图，使用随源码写明的融合与分区校准参数。`bird_box` 仅适用于 1.0.2 及以上，传入后不请求定位服务，且与版本号共同绑定到 HMAC 签名。
 
@@ -58,7 +58,7 @@ SOYOL 的独立服务接收图片，返回原图尺寸与鸟框；其代码、�
 
 ## 运行版本和对应源码
 
-`GET /api/source` 已部署；配置 `BIRDSVISION_SOURCE_REPOSITORY_URL` 和完整 40 位 `BIRDSVISION_SOURCE_COMMIT` 后返回源码仓库及固定提交链接。两个值必须一起设置，并且仓库和该提交须允许服务用户直接访问。未配置时接口返回 503。
+`GET /api/source` 已部署；配置 `BIRDSVISION_SOURCE_REPOSITORY_URL` 和完整 40 位 `BIRDSVISION_SOURCE_COMMIT` 后返回分类 API 源码仓库及固定提交链接。两个值必须一起设置，并且仓库和该提交须允许服务用户直接访问。未配置时接口返回 503。定位器的固定源码与权重入口是上面的 SOYOL v1 Release。
 
 ## 许可证
 
