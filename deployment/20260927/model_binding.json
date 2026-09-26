@@ -1,0 +1,12 @@
+{
+  "format": "birdsvision-production-soyol-weight-binding-v1",
+  "deployed_on": "2026-09-27",
+  "model": "SOYOL single-class bird Detect",
+  "training_selection": "a_documented_retrain_20260926",
+  "training_images": 1316,
+  "selected_checkpoint": "best.pt",
+  "deployed_filename": "best_documented.pt",
+  "weight_sha256": "51bf6d441e1f727d6a27e676e1b5525309e0721b6557c0db151d10540556bf52",
+  "weight_in_repository": false,
+  "independent_final_test_completed": false
+}

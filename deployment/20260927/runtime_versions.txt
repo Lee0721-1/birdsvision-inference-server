@@ -1,0 +1,14 @@
+# Installed packages recorded on the production host on 2026-09-27.
+# This is a direct runtime version record, not a complete transitive lockfile.
+fastapi==0.141.1
+httpx==0.28.1
+numpy==2.5.1
+pillow==12.3.0
+pydantic==2.13.4
+python-multipart==0.0.32
+timm==1.0.28
+torch==2.13.0+cpu
+torchvision==0.28.0+cpu
+uvicorn==0.52.1
+# Ultralytics 8.4.126 is loaded from the deployment's vendor/ directory.
+ultralytics==8.4.126
