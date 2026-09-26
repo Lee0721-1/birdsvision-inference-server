@@ -1,0 +1,11 @@
+{
+  "format": "birdsvision-production-vendor-provenance-v1",
+  "checked_on": "2026-09-27",
+  "distribution": "ultralytics==8.4.126",
+  "wheel_source_index": "https://pypi.org/simple",
+  "wheel_filename": "ultralytics-8.4.126-py3-none-any.whl",
+  "wheel_sha256": "b3912cee68408ddb2117f16cb4d1d808572bbf6984ff9d9a75a65e75ebd8a0ae",
+  "package_files_compared": 361,
+  "result": "all_deployed_ultralytics_package_files_match_downloaded_wheel_and_installed_record",
+  "wheel_in_repository": false
+}

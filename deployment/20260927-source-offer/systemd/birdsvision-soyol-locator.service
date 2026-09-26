@@ -1,0 +1,24 @@
+[Unit]
+Description=BirdsVision SOYOL locator
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/birdsvision-server-releases/1.0.2-soyol-split-20260927/server
+Environment=PYTHONPATH=/home/ubuntu/birdsvision-server-releases/1.0.2-soyol-split-20260927/vendor:/home/ubuntu/birdsvision-server-releases/1.0.2-soyol-split-20260927/server
+Environment=BIRDSVISION_SOYOL_MODEL_PATH=/home/ubuntu/birdsvision-server-releases/1.0.2-soyol-split-20260927/model/best_documented.pt
+ExecStart=/home/ubuntu/server/.venv/bin/python -m uvicorn birdsvision_locator.app:app --host 127.0.0.1 --port 8001
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+MemoryAccounting=true
+MemoryMax=768M
+MemorySwapMax=0
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target
