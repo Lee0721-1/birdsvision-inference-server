@@ -1,0 +1,22 @@
+{
+  "format": "birdsvision-production-source-snapshot-v1",
+  "deployed_on": "2026-09-27",
+  "file_count": 15,
+  "files": {
+    "ops/birdsvision_ops_check.py": "219e2412c873f43564e66318ec8ce09f5d043082d2aae57e8dbb5737dfb5c389",
+    "server/app.py": "b88082a30520d6556aa2e49d72fc253176a6629073eb7e058a3cf8e5af0221c6",
+    "server/auth.py": "52339b548849534ef2dbef55e228e95637d528fe4d3a1d969f7df333d23fb994",
+    "server/birdsvision_locator/__init__.py": "3c2617b8f5ab39939604b8505b73ee9831886d17e28d8451d7e20efd9eb020fb",
+    "server/birdsvision_locator/app.py": "a0c23023f9097eeb59536de681be929c22684fb1b719107beb347b7d73d00b8e",
+    "server/client_version.py": "970caca4aeb298951b20dbde167137d0a9cc5d7c869ba65abd20c3aacc1a8b63",
+    "server/config.py": "47d85529a4e825d05ef3e77239983e25c843c6eee581698af7a26a2c53291c68",
+    "server/dual_view_inference.py": "576d68d191d403b53a293b36da26fb6ed861682d62c4850439ccb96b5d565bf9",
+    "server/inference.py": "ebc55b931eef569ff62c357cc1b3b2835473a37be1147766313973c17f4e602a",
+    "server/labels.py": "e15093daab6b19472346ce2633a574564e685362debcab2bdb7b2e2c67ce2249",
+    "server/locator_client.py": "114242b2a38392f15a7d63eb396e2e3f0f47c9323a640a046408f9feb6ecdea9",
+    "server/modern_inference.py": "dc2c9917b18b31bc77581bfcf44fa1a2e13b76f89fcd109abf08ffffb728f1ad",
+    "server/requirements.txt": "3b0bc06eb61d6a9b097daa68a0266dba1dd341e1ca23adb35067127ea55f7ca8",
+    "systemd/20-soyol-split.conf": "67217bc5f40e1ea3378c8f84ac54ed1929d6b2c35ed02759a3c8043d10ab6394",
+    "systemd/birdsvision-soyol-locator.service": "6da07b97d456c495bc9baf10265953ec596fefca242091ad66c572b507255a9e"
+  }
+}
