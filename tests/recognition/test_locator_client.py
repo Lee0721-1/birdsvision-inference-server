@@ -1,63 +1,20 @@
 # SPDX-FileCopyrightText: 2026 lee0G21
 # SPDX-License-Identifier: AGPL-3.0-only
 import io
-from types import SimpleNamespace
 
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 from PIL import Image
 import torch
 
-from birdsvision_locator import app as locator_app
-from birdsvision_server.soyol import locator_client
-from birdsvision_server.soyol import modern_inference
+from birdsvision_server.recognition import locator_client
+from birdsvision_server.recognition import modern_inference
 
 
 def sample_image():
     output = io.BytesIO()
     Image.new("RGB", (40, 20), "white").save(output, format="PNG")
     return output.getvalue()
-
-
-def test_locator_process_returns_bounded_pixel_boxes(monkeypatch):
-    calls = []
-
-    class FakeCoordinates:
-        def detach(self):
-            return self
-
-        def cpu(self):
-            return self
-
-        def tolist(self):
-            return [[2.0, 3.0, 30.0, 18.0]]
-
-    def predict(**kwargs):
-        calls.append(kwargs)
-        return [SimpleNamespace(boxes=SimpleNamespace(xyxy=FakeCoordinates()))]
-
-    fake = SimpleNamespace(model=SimpleNamespace(end2end=False), predict=predict)
-    monkeypatch.setattr(locator_app, "init_model", lambda: None)
-    monkeypatch.setattr(locator_app, "_model", fake)
-    with TestClient(locator_app.app) as client:
-        response = client.post("/v1/locate", content=sample_image(),
-                               headers={"content-type": "application/octet-stream"})
-    assert response.status_code == 200
-    assert response.json() == {"width": 40, "height": 20,
-                               "boxes": [[2.0, 3.0, 30.0, 18.0]]}
-    assert {key: calls[0][key] for key in ("imgsz", "conf", "iou", "max_det")} == {
-        "imgsz": 640, "conf": 0.25, "iou": 0.7, "max_det": 10,
-    }
-
-
-def test_locator_rejects_invalid_upload(monkeypatch):
-    monkeypatch.setattr(locator_app, "init_model", lambda: None)
-    monkeypatch.setattr(locator_app, "_model", object())
-    with TestClient(locator_app.app) as client:
-        response = client.post("/v1/locate", content=b"not an image",
-                               headers={"content-type": "application/octet-stream"})
-    assert response.status_code == 400
 
 
 def test_classifier_accepts_only_loopback_locator_and_validated_boxes(monkeypatch):

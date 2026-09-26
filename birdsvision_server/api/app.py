@@ -16,7 +16,7 @@ from python_multipart.multipart import parse_options_header
 
 from birdsvision_server import config
 from birdsvision_server.convnext import inference
-from birdsvision_server.soyol import modern_inference
+from birdsvision_server.recognition import modern_inference
 from birdsvision_server.api.client_version import APP_VERSION_HEADER, legacy_results, route_for_version
 from birdsvision_server.api import auth as api_auth
 

@@ -1,8 +1,8 @@
 # BirdsVision Inference Server
 
-> 此仓库是包含分类 API 与 SOYOL 定位服务源码的私密历史工作仓库，**不得整体公开**。分类器和定位器是独立项目：分类器源码与权重留在私密项目；SOYOL 只从独立定位项目发布。本仓库保留的生产快照用于内部核对，不是整体公开清单。
+> 本仓库当前工作树只维护私密分类 API。SOYOL 定位服务已经迁往独立的 [SOYOL 仓库](https://github.com/Lee0721-1/birdsvision-soyol-locator)。本仓库的旧提交历史和 `deployment/20260927/` 生产快照仍保留迁移前的定位器文件，故不能将本仓库整体切换 Public。
 
-此仓库保留 BirdsVision 分类 API 和 SOYOL 定位服务的历史工作源码。分类 API 包含挑战令牌鉴权、限流、上传边界、双视图 logits 融合，以及按客户端版本选择的识别链路。SOYOL Detect 在独立进程运行，分类服务通过本机 HTTP 接口取得鸟框。两端 1.0.1 及无版本号请求保持旧响应；1.0.2 及以上请求可使用手动画框并返回学名。测试使用 fake 模型，不会下载或加载生产模型。
+本仓库包含 BirdsVision 分类 API、挑战令牌鉴权、限流、上传边界、双视图 logits 融合，以及按客户端版本选择的识别链路。分类服务通过本机 HTTP 接口调用另一个项目的 SOYOL 定位器取得鸟框；它不加载 Ultralytics 或定位权重。两端 1.0.1 及无版本号请求保持旧响应；1.0.2 及以上请求可使用手动画框并返回学名。测试使用 fake 模型，不会下载或加载生产模型。
 
 仓库不包含正式分类器权重、正式类表、SOYOL 权重、图片、服务器地址、TLS 私钥或生产环境变量。分类器的生产权重保持私有。直接运行 Uvicorn 时默认只监听 `127.0.0.1`；Docker 容器内监听 `0.0.0.0`，才能使用容器端口映射。缺少自行配置的旧分类器权重时服务拒绝启动；新版三个配置全部未设时，1.0.2 请求返回模型未就绪；只设置一部分则启动报错，避免以不完整配置提供服务。
 
@@ -14,7 +14,7 @@
 
 - `birdsvision_server/api/`：接口、鉴权和客户端版本分流；`tests/api/`：对应测试。
 - `birdsvision_server/convnext/`：旧版分类推理和双视图分类运算；`tests/convnext/`：对应测试。
-- `birdsvision_server/soyol/`：1.0.2 分类编排与定位服务客户端；`birdsvision_locator/`：独立的 SOYOL 定位服务；`tests/soyol/`：版本分流和进程接口测试。
+- `birdsvision_server/recognition/`：1.0.2 分类编排与外部定位器的 HTTP 客户端；`tests/recognition/`：版本分流和客户端合同测试。
 - `birdsvision_server/config.py`：环境变量配置；`openapi/`：接口合同。
 
 ## 安装和测试
@@ -27,7 +27,7 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-定位服务使用独立 Python 环境，安装 `requirements-locator.txt`。分类服务的 `requirements.txt` 不安装 Ultralytics。
+定位服务的安装、启动和训练说明在独立的 [SOYOL 仓库](https://github.com/Lee0721-1/birdsvision-soyol-locator)。本分类服务的 `requirements.txt` 不安装 Ultralytics。
 
 ## 使用自有权重启动
 
@@ -48,13 +48,13 @@ uvicorn birdsvision_server.api.app:app --host 127.0.0.1 --port 8000
 
 SOYOL 取自 Student YOLO；内部教师模型 Teacher YOLO 简写为 TYLO。TYLO 是闭源内部模型，主要用于比对学生模型的效果。
 
-在独立环境中设置 `BIRDSVISION_SOYOL_MODEL_PATH`，启动 `uvicorn birdsvision_locator.app:app --host 127.0.0.1 --port 8001`。定位服务只加载单类 SOYOL Detect 权重，不读取分类器权重或类表。它显式使用 one-to-many 分支，`imgsz=640`、`conf=0.25`、`iou=0.7`，经 NMS 后最多 10 框。
+SOYOL 的独立服务接收图片，返回原图尺寸与鸟框；其代码、权重和安装说明属于[定位项目](https://github.com/Lee0721-1/birdsvision-soyol-locator)。本仓库只保留分类侧的 HTTP 客户端和响应校验。
 
 分类服务另外设置 `BIRDSVISION_1983_MODEL_PATH`、`BIRDSVISION_1983_LABELS_PATH` 和 `BIRDSVISION_SOYOL_LOCATOR_URL=http://127.0.0.1:8001/v1/locate`。分类服务仅接受本机定位地址，并核对返回的图片尺寸和鸟框。零框时仅用原图，定位服务出错时识别请求失败，不回退旧模型。分类器一次处理原图及裁剪视图，使用随源码写明的融合与分区校准参数。`bird_box` 仅适用于 1.0.2 及以上，传入后不请求定位服务，且与版本号共同绑定到 HMAC 签名。
 
 两个进程须共享本机网络命名空间；如使用容器，需另行配置使分类容器内的 `127.0.0.1:8001` 指向定位进程。现有单容器 `Dockerfile` 只启动分类服务，不能单独提供新版自动定位链路。不得将定位端口公开到公网。
 
-这个混合仓库当前仍为 Private，且不作为 SOYOL 整体公开仓库。2026-09-27 线上 1.0.2 已切到独立 SOYOL 定位进程；[当日运行源码快照](deployment/20260927/README.md)保存了实际运行的 Python 文件、服务配置和运维检查脚本。仓库根目录的整理版代码与线上文件在包结构及部分实现上有差异，不能将整理版单独描述为线上运行实例的精确对应源码。SOYOL 独立项目公开前仍须补齐依赖来源、固定发布版本、SOYOL 权重及模型材料，并核对许可边界。分类器源码与现用权重不在 SOYOL 公开范围内。
+本仓库保持 Private，不作为 SOYOL 的公开入口。2026-09-27 线上 1.0.2 已切到独立 SOYOL 定位进程；[当日运行源码快照](deployment/20260927/README.md)保存了历史运行文件、服务配置和运维检查脚本，其中含迁移前的定位器文件，只供内部核对。仓库根目录的整理版代码与线上文件在包结构及部分实现上有差异，不能将整理版单独描述为线上运行实例的精确对应源码。分类器源码与现用权重不在 SOYOL 公开范围内。
 
 ## 运行版本和对应源码
 
