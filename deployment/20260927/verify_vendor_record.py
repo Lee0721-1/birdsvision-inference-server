@@ -9,10 +9,11 @@ import base64
 import csv
 import hashlib
 import json
+import zipfile
 from pathlib import Path
 
 
-def verify(vendor: Path) -> dict:
+def verify(vendor: Path, wheel: Path | None = None) -> dict:
     vendor = vendor.resolve(strict=True)
     metadata = vendor / "ultralytics-8.4.126.dist-info"
     if not metadata.is_dir():
@@ -43,11 +44,30 @@ def verify(vendor: Path) -> dict:
     }
     if len(checked) < 100 or package_files != checked:
         raise ValueError("vendored package file list differs from installed RECORD")
-    return {"status": "verified_against_installed_record",
-            "distribution": "ultralytics==8.4.126", "package_files": len(checked)}
+    result = {"status": "verified_against_installed_record",
+              "distribution": "ultralytics==8.4.126", "package_files": len(checked)}
+    if wheel is not None:
+        wheel = wheel.resolve(strict=True)
+        if wheel.name != "ultralytics-8.4.126-py3-none-any.whl":
+            raise ValueError("unexpected Ultralytics wheel filename")
+        with zipfile.ZipFile(wheel) as archive:
+            wheel_files = {
+                name for name in archive.namelist()
+                if name.startswith("ultralytics/") and not name.endswith("/")
+            }
+            if wheel_files != checked:
+                raise ValueError("wheel package file list differs from deployed vendor")
+            for name in wheel_files:
+                if archive.read(name) != (vendor / name).read_bytes():
+                    raise ValueError(f"wheel file differs from deployed vendor: {name}")
+        result["status"] = "verified_against_pypi_wheel_and_installed_record"
+        result["wheel_sha256"] = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    return result
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vendor", type=Path, required=True)
-    print(json.dumps(verify(parser.parse_args().vendor)))
+    parser.add_argument("--wheel", type=Path)
+    args = parser.parse_args()
+    print(json.dumps(verify(args.vendor, args.wheel)))

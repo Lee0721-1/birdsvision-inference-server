@@ -1,0 +1,10 @@
+{
+  "format": "birdsvision-production-runtime-environment-v1",
+  "recorded_on": "2026-09-27",
+  "operating_system": "Ubuntu 24.04.4 LTS",
+  "architecture": "x86_64",
+  "python": "3.12.3",
+  "pip": "26.2",
+  "python_packages": "runtime-freeze.txt",
+  "vendored_ultralytics": "vendor_provenance.json"
+}
