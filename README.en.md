@@ -1,5 +1,7 @@
 # BirdsVision Inference Server
 
+> This is a private historical workspace containing both classifier API and SOYOL locator source. Do not make the entire repository public. The classifier and locator are separate projects: classifier source and weights stay private; SOYOL will be released from its independent locator project. The production snapshot here is retained for internal verification.
+
 SOYOL stands for Student YOLO. The internal teacher model is called TYLO (Teacher YOLO); it remains closed source and is mainly used to compare the student's results.
 
 Private open-source preparation of the BirdsVision FastAPI contract, authentication, request limits, dual-view fusion, and versioned 1.0.2 route. SOYOL Detect runs in a separate process; the classifier receives boxes over a loopback HTTP interface. Production classifier weights remain private. Weights, labels, private configuration, and datasets are excluded. This repository is not yet a publicly accessible copy of the running production revision.
