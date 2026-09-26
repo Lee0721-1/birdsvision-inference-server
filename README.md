@@ -1,6 +1,6 @@
 # BirdsVision Inference Server
 
-> 本仓库目前尚未对公众开放，计划公开分类 API 和对应的线上源码快照。SOYOL 定位服务已迁往独立的 [SOYOL 仓库](https://github.com/Lee0721-1/birdsvision-soyol-locator)；分类器训练源码在[独立仓库](https://github.com/Lee0721-1/birdsvision-model-training)。旧提交历史和 `deployment/20260927/` 仍含迁移前的定位器文件，公开前须检查完整历史和线上对应关系。
+> 本仓库公开分类 API 和对应的线上源码快照。SOYOL 定位服务位于独立的 [SOYOL 仓库](https://github.com/Lee0721-1/birdsvision-soyol-locator)；分类器训练源码在[独立仓库](https://github.com/Lee0721-1/birdsvision-model-training)。旧提交历史和 `deployment/20260927/` 仍含迁移前的定位器文件，阅读历史版本时须区分拆分前后的架构。
 
 本仓库包含 BirdsVision 分类 API、挑战令牌鉴权、限流、上传边界、双视图 logits 融合，以及按客户端版本选择的识别链路。分类服务通过本机 HTTP 接口调用另一个项目的 SOYOL 定位器取得鸟框；它不加载 Ultralytics 或定位权重。两端 1.0.1 及无版本号请求保持旧响应；1.0.2 及以上请求可使用手动画框并返回学名。测试使用 fake 模型，不会下载或加载生产模型。
 
@@ -8,7 +8,7 @@
 
 ## 项目官网
 
-[鸟视 BirdsVision 官网](https://www.birdsvision.com.cn/)介绍 App、当前模型进度、隐私说明与下载方式。本仓库保存推理服务的开源准备代码；官网页面不是本仓库运行实例的对应源码证明。
+[鸟视 BirdsVision 官网](https://www.birdsvision.com.cn/)介绍 App、当前模型进度、隐私说明与下载方式。本仓库提供推理服务源码；官网页面不是本仓库运行实例的对应源码证明。
 
 ## 目录
 
@@ -54,11 +54,11 @@ SOYOL 的独立服务接收图片，返回原图尺寸与鸟框；其代码、�
 
 两个进程须共享本机网络命名空间；如使用容器，需另行配置使分类容器内的 `127.0.0.1:8001` 指向定位进程。现有单容器 `Dockerfile` 只启动分类服务，不能单独提供新版自动定位链路。不得将定位端口公开到公网。
 
-本仓库目前尚未对公众开放。2026-09-27 线上 1.0.2 已切到独立 SOYOL 定位进程；[当前运行源码快照](deployment/20260927-source-offer/README.md)保存了后续加入源码入口的 API 文件、服务配置和运维检查脚本，前一版本保留在 [20260927 快照](deployment/20260927/README.md)。仓库根目录的整理版代码与线上文件在包结构及部分实现上有差异，不能将整理版单独描述为线上运行实例的精确对应源码。分类器推理源码计划随本仓库公开；现用分类器权重、正式类表和训练图片保持私有。
+2026-09-27 线上 1.0.2 已切到独立 SOYOL 定位进程；[当前运行源码快照](deployment/20260927-source-offer/README.md)保存了后续加入源码入口的 API 文件、服务配置和运维检查脚本，前一版本保留在 [20260927 快照](deployment/20260927/README.md)。仓库根目录的整理版代码与线上文件在包结构及部分实现上有差异，不能将整理版单独描述为线上运行实例的精确对应源码。现用分类器权重、正式类表和训练图片保持私有。
 
 ## 运行版本和对应源码
 
-`GET /api/source` 已部署；在配置 `BIRDSVISION_SOURCE_REPOSITORY_URL` 和完整 40 位 `BIRDSVISION_SOURCE_COMMIT` 后返回源码仓库及固定提交链接。两个值必须一起设置，并且仓库和该提交须允许服务用户直接访问。当前三个仓库仍为 Private，接口返回 503；上线 AGPL 源码获取入口前不得把它视为合规发布完成。
+`GET /api/source` 已部署；配置 `BIRDSVISION_SOURCE_REPOSITORY_URL` 和完整 40 位 `BIRDSVISION_SOURCE_COMMIT` 后返回源码仓库及固定提交链接。两个值必须一起设置，并且仓库和该提交须允许服务用户直接访问。未配置时接口返回 503。
 
 ## 许可证
 
